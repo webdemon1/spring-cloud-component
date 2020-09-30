@@ -1,0 +1,43 @@
+# Default ignored files
+/workspace.xml
+
+*.class
+*.log
+*.iml
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+# ide files #
+.classpath
+.project
+.mymetadata
+/.gradle/
+/.idea/
+/captures/
+.DS_Store
+.idea/
+
+# setting folders #
+.settings/
+.svn/
+.bin/
+.git/
+target/
+lib/
+/encodings.xml
+/misc.xml
+/modules.xml
+/../spring-cloud-load-balance/spring-cloud-load-balance.iml
+/vcs.xml
+/compiler.xml
+/../spring-cloud-load-balance/spring-cloud-load-balance.iml
+/.idea/compiler.xml
+/.idea/encodings.xml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/spring-cloud-component.iml
+/.idea/vcs.xml
+/.idea/workspace.xml
