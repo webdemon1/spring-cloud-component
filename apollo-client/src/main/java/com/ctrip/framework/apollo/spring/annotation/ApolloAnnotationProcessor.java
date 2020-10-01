@@ -68,7 +68,7 @@ public class ApolloAnnotationProcessor extends ApolloProcessor implements Applic
         if (!StringUtils.isEmpty(property)) {
             logger.info("检测到使用了 listener 数组 监听namespace配置变化：{}", property);
             String[] apolloConfigChangeListenerValue = property.split(",");
-            if (apolloConfigChangeListenerValue != null && apolloConfigChangeListenerValue.length != 0) {
+            if (apolloConfigChangeListenerValue.length != 0) {
                 namespaces = apolloConfigChangeListenerValue;
             }
         } else {
