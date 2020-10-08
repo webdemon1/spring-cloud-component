@@ -74,7 +74,7 @@ public class LoadBalancer<T extends Server> extends ZoneAwareLoadBalancer implem
     public Server chooseServer(Object key) {
         String serviceName = this.getName();
         List<Server> serverList = configFileLoader.getConfigServer(serviceName);
-        //如果有包含IP的，则不通过eureka返回的清单中供选择，直接调用
+        //如果有包含端口的，则不通过eureka返回的清单中供选择，直接调用
         if (serverList != null) {
             Optional<Server> serverOptional = serverList.stream().filter(server -> server.getPort() > 0).findFirst();
             if (serverOptional.isPresent()) {
