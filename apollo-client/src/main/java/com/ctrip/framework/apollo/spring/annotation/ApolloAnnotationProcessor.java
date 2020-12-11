@@ -20,11 +20,12 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 /**
- * 修改了 processMethod 方法 使之能够监听 配置文件中的配置变化  不再局限于 注解
- * 相较于源码中的ApolloAnnotationProcessor 额外实现了ApplicationContextAware 用以获取applicationContext
+ * 修改了 processMethod 方法 使之能够监听 配置文件中的配置变化  不再局限于注解
+ * 相较于源码中的 ApolloAnnotationProcessor 额外实现了 ApplicationContextAware 用以获取applicationContext
  * 因为 本身 ApolloAnnotationProcessor 不归spring ioc容器管理 ，只能通过applicationContext来获取配置信息
  */
 public class ApolloAnnotationProcessor extends ApolloProcessor implements ApplicationContextAware {
+
     Logger logger = LoggerFactory.getLogger(ApolloAnnotationProcessor.class);
 
     private ApplicationContext applicationContext;
@@ -48,8 +49,7 @@ public class ApolloAnnotationProcessor extends ApolloProcessor implements Applic
 
     @Override
     protected void processMethod(final Object bean, String beanName, final Method method) {
-        ApolloConfigChangeListener annotation = AnnotationUtils
-                .findAnnotation(method, ApolloConfigChangeListener.class);
+        ApolloConfigChangeListener annotation = AnnotationUtils.findAnnotation(method, ApolloConfigChangeListener.class);
         if (annotation == null) {
             return;
         }
@@ -68,7 +68,7 @@ public class ApolloAnnotationProcessor extends ApolloProcessor implements Applic
         if (!StringUtils.isEmpty(property)) {
             logger.info("检测到使用了 listener 数组 监听namespace配置变化：{}", property);
             String[] apolloConfigChangeListenerValue = property.split(",");
-            if (apolloConfigChangeListenerValue != null && apolloConfigChangeListenerValue.length != 0) {
+            if (apolloConfigChangeListenerValue.length != 0) {
                 namespaces = apolloConfigChangeListenerValue;
             }
         } else {
@@ -93,7 +93,6 @@ public class ApolloAnnotationProcessor extends ApolloProcessor implements Applic
 
         for (String namespace : namespaces) {
             Config config = ConfigService.getConfig(namespace);
-
             config.addChangeListener(configChangeListener);
         }
     }
