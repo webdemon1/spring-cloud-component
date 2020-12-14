@@ -23,6 +23,7 @@
         <module>spring-cloud-load-balance</module>
         <module>apollo-client</module>
         <module>common-spring-cloud-framework</module>
+        <module>mybatis-autoconfig</module>
     </modules>
 
     <dependencyManagement>
