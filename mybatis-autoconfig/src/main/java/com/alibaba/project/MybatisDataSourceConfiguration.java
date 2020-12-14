@@ -1,4 +1,4 @@
-package com.alibaba.demon;
+package com.alibaba.project;
 
 
 import com.alibaba.druid.pool.DruidDataSource;
@@ -80,7 +80,7 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
      */
     @Override
     @SuppressWarnings("unchecked")
-    public void afterPropertiesSet() throws Exception {
+    public void afterPropertiesSet() {
         setMainClassPackage();
         // 执行注册 mybatis
         mybatisConsumerMap.forEach((key, value) -> value.accept(key));

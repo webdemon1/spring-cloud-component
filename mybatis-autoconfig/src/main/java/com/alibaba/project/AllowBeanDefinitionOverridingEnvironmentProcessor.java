@@ -1,4 +1,4 @@
-package com.alibaba.demon;
+package com.alibaba.project;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;

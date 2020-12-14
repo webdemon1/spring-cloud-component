@@ -1,4 +1,4 @@
 org.springframework.boot.env.EnvironmentPostProcessor=\
-com.alibaba.demon.AllowBeanDefinitionOverridingEnvironmentProcessor
+com.alibaba.project.AllowBeanDefinitionOverridingEnvironmentProcessor
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-com.alibaba.demon.MybatisDataSourceConfiguration
+com.alibaba.project.MybatisDataSourceConfiguration

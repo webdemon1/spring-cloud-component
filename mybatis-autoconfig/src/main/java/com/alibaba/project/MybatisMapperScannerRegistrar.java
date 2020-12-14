@@ -1,4 +1,4 @@
-package com.alibaba.demon;
+package com.alibaba.project;
 
 import org.mybatis.spring.annotation.MapperScannerRegistrar;
 import org.mybatis.spring.mapper.ClassPathMapperScanner;
