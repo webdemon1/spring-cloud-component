@@ -8,6 +8,7 @@
         <version>2.1.6.RELEASE</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
+
     <groupId>com.alibaba.project</groupId>
     <artifactId>spring-cloud-component</artifactId>
     <version>1.0.0-SNAPSHOT</version>
@@ -24,6 +25,7 @@
         <module>apollo-client</module>
         <module>common-spring-cloud-framework</module>
         <module>mybatis-autoconfig</module>
+        <module>jpa-autoconfig</module>
     </modules>
 
     <dependencyManagement>
@@ -54,11 +56,6 @@
             <artifactId>spring-cloud-starter-netflix-ribbon</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.ctrip.framework.apollo</groupId>
-            <artifactId>apollo-client</artifactId>
-            <version>${apollo-client.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-gateway</artifactId>
         </dependency>
@@ -69,10 +66,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-config</artifactId>
         </dependency>
     </dependencies>
 

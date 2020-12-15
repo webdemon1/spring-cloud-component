@@ -1,4 +1,4 @@
-package com.e6yun.project.apollo.config;
+package com.alibaba.project.apollo.config;
 
 import com.ctrip.framework.apollo.model.ConfigChangeEvent;
 import org.springframework.core.Ordered;

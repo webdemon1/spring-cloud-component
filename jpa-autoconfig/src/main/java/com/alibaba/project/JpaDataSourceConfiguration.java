@@ -2,18 +2,11 @@ package com.alibaba.project;
 
 
 import com.alibaba.druid.pool.DruidDataSource;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.ibatis.plugin.Interceptor;
-import org.apache.ibatis.session.defaults.DefaultSqlSessionFactory;
-import org.mybatis.spring.SqlSessionFactoryBean;
-import org.mybatis.spring.SqlSessionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConstructorArgumentValues;
@@ -24,36 +17,34 @@ import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateProperties;
+import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 
 import javax.sql.DataSource;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * 通过配置动态生成  mybatis 的实现核心, 实现了InitializingBean 做数据源配置，BeanPostProcessor 做初始化
- * 如果不实现BeanPostProcessor会出现E6DynamicDataSourceConfiguration不能加载的问题
+ * 通过配置动态生成jpa 和 mybatis 的实现 核心
+ * 实现了InitializingBean 做数据源配置，BeanPostProcessor 做初始化 如果不实现BeanPostProcessor会出现E6DynamicDataSourceConfiguration不能加载的问题
  */
-@SuppressWarnings({"rawtypes", "NullableProblems"})
 @Configuration
 @AutoConfigureBefore(DataSourceAutoConfiguration.class)
 @ConfigurationProperties(prefix = "spring")
-@Import(MybatisMapperScannerRegistrar.class)
-public class MybatisDataSourceConfiguration implements InitializingBean, ApplicationContextAware, BeanPostProcessor {
-    static Logger logger = LoggerFactory.getLogger(MybatisDataSourceConfiguration.class);
+@EnableJpaRepositories
+public class JpaDataSourceConfiguration implements InitializingBean, ApplicationContextAware, BeanPostProcessor {
+    static Logger logger = LoggerFactory.getLogger(JpaDataSourceConfiguration.class);
     public static Map<String, Map<String, String>> datasource = new HashMap<>();
     private static ApplicationContext applicationContext;
     /**
@@ -63,7 +54,7 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
 
     @Value("${spring.jpa.show-sql:true}")
     public Boolean isShowSql;
-    @Value("${main.class.package:com.alibaba.demon}")
+    @Value("${main.class.package:com.e6yun.project}")
     public String defaultMainClassPackage;
 
     public static String primaryDataSource;
@@ -72,7 +63,7 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
 
     @Value("${spring.primaryDataSource:spring.datasource.primary}")
     public void setPrimaryDataSource(String primaryDataSource) {
-        MybatisDataSourceConfiguration.primaryDataSource = primaryDataSource;
+        JpaDataSourceConfiguration.primaryDataSource = primaryDataSource;
     }
     /**
      * 核心方法
@@ -80,11 +71,12 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
      * @throws Exception
      */
     @Override
-    @SuppressWarnings("unchecked")
-    public void afterPropertiesSet() {
+    public void afterPropertiesSet() throws Exception {
         setMainClassPackage();
-        // 执行注册 mybatis
-        mybatisConsumerMap.forEach((key, value) -> value.accept(key));
+        //accept执行，此时sqlserver已经加载完毕
+        //这两行执行注册 mybaitis
+
+        jpaConsumerMap.entrySet().forEach(entity -> entity.getValue().accept(entity.getKey()));
         if (datasource.size() == 0) {
             throw new DynamicDataSourceException("数据源配置未填写");
         }
@@ -92,6 +84,7 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
         for (Map.Entry<String, Map<String, String>> entry : datasource.entrySet()) {
             String dataSourceName = entry.getKey();
             Map<String, String> prop = entry.getValue();
+
             /**
              * 得到当前数据源
              */
@@ -101,9 +94,9 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
             }
 
             /**
-             * 构建mybatis环境
+             * 构建jpa 环境
              */
-            mybatisConfigBuild(dataSource, dataSourceName, prop);
+            jpaConfigBuild(dataSource, dataSourceName, prop);
         }
     }
 
@@ -127,7 +120,6 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
             throw new DynamicDataSourceException("primary数据源url或username或driver属性未填写");
         }
         if(StringUtils.isEmpty(driver)){
-            assert url != null;
             if(url.contains("sqlserver")){
                 driver = Constant.SQL_SERVER_DRIVER_CLASS_NAME;
             }else {
@@ -154,7 +146,7 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
     }
 
     /**
-     * 设置启动类所在的包名
+     * 设置启动类所在的 包名
      */
     private void setMainClassPackage() {
         Map<String, Object> beansWithAnnotation = applicationContext.getBeansWithAnnotation(SpringBootApplication.class);
@@ -189,13 +181,91 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
             //得到注册的数据源
             dataSource = getBean(dataSourceName + Constant.DATASOURCE);
         } catch (Exception e) {
-            logger.info("registerAndGetThisDataSource Exception", e);
+            logger.info("Exception = {} ", e);
             throw new DynamicDataSourceException("创建" + dataSourceName + "数据源失败，请检查application配置文件中数据库配置信息是否配置正确");
         }
-        logger.info("current DataSourceName = {}", dataSourceName + "DataSource");
+        logger.info("current DataSoruceName = {}", dataSourceName + "DataSource");
         return dataSource;
     }
 
+    /**
+     * jpa 环境配置
+     *
+     * @param dataSource
+     * @param dataSourceName
+     * @param prop
+     */
+    private void jpaConfigBuild(DataSource dataSource, String dataSourceName, Map<String, String> prop) {
+        if(Objects.equals(prop.get(Constant.JPA_USE),Boolean.FALSE.toString())){
+            logger.info("数据源 {} 没有使用 JPA",dataSourceName);
+            return;
+        }
+        setDefaultJPAScanAndPackage(dataSourceName, prop);
+        logger.info("Jpa {} properties begin ", dataSourceName);
+        // 获取 jpaProperties
+        JpaProperties jpaProperties = getBeanForMap(JpaProperties.class);
+        HibernateProperties hibernateProperties = getBeanForMap(HibernateProperties.class);
+        jpaProperties.setShowSql(isShowSql);
+        logger.info("jpaProperties = {}", jpaProperties);
+        //set  entityManagerFactoryPrimary4对象
+        ConstructorArgumentValues constructorArgumentValues = new ConstructorArgumentValues();
+        constructorArgumentValues.addGenericArgumentValue(dataSource);
+        EntityManagerFactoryBuilder beanForMap = null;
+        try {
+            beanForMap = getBeanForMap(EntityManagerFactoryBuilder.class);
+        } catch (Exception e) {
+            logger.info("Exception = {} ", e);
+            throw new DynamicDataSourceException("请保证配置文件中primaryDataSource或者primary至少存在一个，并且primaryDataSource下的值能够找到对应的datasource");
+        }
+        logger.info("EntityManagerFactoryBuilder = {}", beanForMap);
+        constructorArgumentValues.addGenericArgumentValue(beanForMap);
+        constructorArgumentValues.addGenericArgumentValue(jpaProperties);
+        constructorArgumentValues.addGenericArgumentValue(dataSourceName);
+        constructorArgumentValues.addGenericArgumentValue(hibernateProperties);
+        constructorArgumentValues.addGenericArgumentValue(prop.get(Constant.JPA_MODEL_PACKAGE).split(","));
+        logger.info("jpaModelPackage = {}", prop.get(Constant.JPA_MODEL_PACKAGE));
+        //这里注意通过init设置的对象不能重复设置  所以方法内如果这个beanName对象已经存在 直接return
+        LocalContainerEntityManagerFactoryBean localContainerEntityManagerFactoryBean = null;
+        try {
+            setCosAndInitBean(Constant.ENTITY_MANAGER_FACTORY_PRIMARY4 + dataSourceName, EntityManagerFactoryBean.class, constructorArgumentValues);
+            //获取刚才set进去的对象  注意获取到的要在前面加&
+            localContainerEntityManagerFactoryBean = getBean("&" + Constant.ENTITY_MANAGER_FACTORY_PRIMARY4 + dataSourceName);
+            logger.info("localContainerEntityManagerFactoryBean = {}", localContainerEntityManagerFactoryBean);
+        } catch (Exception e) {
+            logger.info("Exception", e);
+            throw new DynamicDataSourceException(Constant.ENTITY_MANAGER_FACTORY_PRIMARY4 + dataSourceName + "创建失败，请检查配置文件是否完整");
+        }
+        try {
+            // 构建 transactionManagerPrimary4
+            ConstructorArgumentValues cxf = new ConstructorArgumentValues();
+            cxf.addGenericArgumentValue(localContainerEntityManagerFactoryBean.getObject());
+
+            setCosBean(Constant.TRANSACTION_MANAGER_PRIMARY4 + dataSourceName, JpaTransactionManager.class, dataSourceName, cxf);
+            // 这里是为了 主数据源时，默认spring 去找 ioc中 transactionManager这个bean 但是这个bean 未经过我们配置，多数据源jpa事务会失效
+            // 所以这里处理为 删除原spring自己提供的transactionManager  注入我们的主数据的配置，当然这时只能有一个事务管理器是primary的就是我们的transactionManager
+            // 所以setCosBean的其他jpa事务管理器不能设置为primary
+            if (primaryDataSource.contains(dataSourceName)) {
+                removeBean(Constant.SPRING_JPA_TRANSACTIONMANAGER_BEAN_NAME);
+                setCosBean(Constant.SPRING_JPA_TRANSACTIONMANAGER_BEAN_NAME, JpaTransactionManager.class, dataSourceName, cxf);
+            }
+            logger.info("this dataSource jpa is build completed");
+        } catch (Exception e) {
+            logger.info("Exception", e);
+            throw new DynamicDataSourceException(Constant.TRANSACTION_MANAGER_PRIMARY4 + dataSourceName + "创建失败，请检查配置文件是否完整");
+        }
+    }
+
+    public static void setDefaultJPAScanAndPackage(String dataSourceName, Map<String, String> prop) {
+        serDefaultDriver(dataSourceName,prop);
+        if (StringUtils.isEmpty(prop.get(Constant.JPA_MODEL_PACKAGE))) {
+            logger.info("数据源 {}未配置 {} ,使用默认配置",dataSourceName, Constant.JPA_MODEL_PACKAGE);
+            prop.put(Constant.JPA_MODEL_PACKAGE, mainClassPackage+".**.po");
+        }
+        if (StringUtils.isEmpty(prop.get(Constant.JPA_SCAN))) {
+            logger.info("数据源 {}未配置 {} ,使用默认配置",dataSourceName, Constant.JPA_SCAN);
+            prop.put(Constant.JPA_SCAN, mainClassPackage+".**." + dataSourceName + ".dao");
+        }
+    }
 
     public static void setDefaultMybatisScanAndPackage(String dataSourceName, Map<String, String> prop) {
         serDefaultDriver(dataSourceName,prop);
@@ -215,99 +285,18 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
     }
 
     /**
-     * 自定义mybatis拦截器
-     */
-    @Autowired(required = false)
-    List<Interceptor> interceptorList;
-
-    /**
-     * mybatis 环境配置
-     *
-     * @param dataSource
-     * @param dataSourceName
-     * @param prop
-     */
-    private void mybatisConfigBuild(DataSource dataSource, String dataSourceName, Map<String, String> prop) {
-        // 开始构建 SqlSessionFactoryBean对象  这里是他的mapper.xml路径
-        if(Objects.equals(prop.get(Constant.MYBATIS_USE),Boolean.FALSE.toString())){
-            logger.info("数据源 {} 没有使用 Mybatis",dataSourceName);
-            return;
-        }
-        // 设置默认 mybatis扫包
-        setDefaultMybatisScanAndPackage(dataSourceName, prop);
-        logger.info("Mybatis {} properties begin ", dataSourceName);
-        String[] mappersPath_equipDataSource = prop.get(Constant.MYBATIS_MAPPER_PATH).split(",");
-        logger.info("Mybatis Mapper path = {} ", prop.get(Constant.MYBATIS_MAPPER_PATH));
-
-        // mybatis 事务配置
-        try {
-            ConstructorArgumentValues cxf3 = new ConstructorArgumentValues();
-            cxf3.addGenericArgumentValue(dataSource);
-            setCosBean(dataSourceName + "TransactionManager", DataSourceTransactionManager.class, cxf3);
-        } catch (Exception e) {
-            logger.error("Exception", e);
-            throw new DynamicDataSourceException("配置mybatisTransactionManager失败，请检查" + dataSourceName + "数据源的配置");
-        }
-        //封装resource
-        PathMatchingResourcePatternResolver pathMatchingResourcePatternResolver = new PathMatchingResourcePatternResolver();
-        List<Resource> resources = new LinkedList<>();
-        for (String path : mappersPath_equipDataSource) {
-            String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + path;
-            Resource[] mapperLocations;
-            try {
-                mapperLocations = pathMatchingResourcePatternResolver.getResources(packageSearchPath);
-            } catch (IOException e) {
-                logger.error("Exception", e);
-                throw new DynamicDataSourceException("读取mybaits配置出错，请检查" + dataSourceName + "数据源的mybatis-mapper-path是否配置正确");
-            }
-            resources.addAll(Arrays.asList(mapperLocations));
-        }
-
-        if (resources.size() == 0) {
-            logger.warn("mapper.xml数量为0，请检查数据源的mybatis-mapper-path是否配置正确");
-        }
-
-        Map<String,Object> original = new HashMap<>(2);
-        original.put("dataSource", dataSource);
-        original.put("mapperLocations", resources.toArray((new Resource[0])));
-        //设置SqlSessionFactoryBean
-        Object sqlSessionFactoryBean = null;
-        try {
-            setBean(dataSourceName + "SqlSessionFactoryBean", SqlSessionFactoryBean.class, original);
-            //得到构建好的sqlSessionFactoryBean 开始构建SqlSessionTemplate
-            sqlSessionFactoryBean = getBean(dataSourceName + "SqlSessionFactoryBean");
-            //增加mybatis自定义拦截器
-            if (CollectionUtils.isNotEmpty(interceptorList)) {
-                for (Interceptor interceptor : interceptorList) {
-                    ((DefaultSqlSessionFactory) sqlSessionFactoryBean).getConfiguration().addInterceptor(interceptor);
-                }
-            }
-            logger.info("sqlSessionFactoryBean = {} ", sqlSessionFactoryBean);
-        } catch (Exception e) {
-            logger.error("Exception", e);
-            throw new DynamicDataSourceException(dataSourceName + "SqlSessionFactoryBean" + "创建失败，请检查配置文件和mapper.xml的配置是否正确");
-        }
-        ConstructorArgumentValues cxf2 = new ConstructorArgumentValues();
-        cxf2.addGenericArgumentValue(sqlSessionFactoryBean);
-        try {
-            setCosBean(dataSourceName + "SqlSessionTemplate", SqlSessionTemplate.class, dataSourceName, cxf2);
-            logger.info("this dataSource mybatis is build completed");
-        } catch (Exception e) {
-            logger.info("Exception", e);
-            throw new DynamicDataSourceException(dataSourceName + "SqlSessionTemplate" + "创建失败，请检查配置文件和mapper.xml的配置是否正确");
-        }
-    }
-
-    /**
      * 函数式声明Consumer
      */
-    static Map<BeanDefinitionRegistry, Consumer> mybatisConsumerMap = new ConcurrentHashMap<>();
+    static Map<BeanDefinitionRegistry, Consumer> jpaConsumerMap = new ConcurrentHashMap<>();
 
     /**
      * 将consumer注入进这个方法
+     *
+     * @param beanDefinitionRegistry
+     * @param f
      */
-    public static void addMybatisConsumer(BeanDefinitionRegistry beanDefinitionRegistry, Consumer f) {
-        mybatisConsumerMap.put(beanDefinitionRegistry, f);
+    public static void addJpaConsumer(BeanDefinitionRegistry beanDefinitionRegistry, Consumer f) {
+        jpaConsumerMap.put(beanDefinitionRegistry, f);
     }
 
 
@@ -316,7 +305,7 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
     }
 
     public static void setDatasource(Map<String, Map<String, String>> datasource) {
-        MybatisDataSourceConfiguration.datasource = datasource;
+        JpaDataSourceConfiguration.datasource = datasource;
     }
 
     /**
@@ -324,7 +313,7 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
      */
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {
-        MybatisDataSourceConfiguration.applicationContext = applicationContext;
+        JpaDataSourceConfiguration.applicationContext = applicationContext;
     }
 
     /**
@@ -360,7 +349,7 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
 
     private static void checkApplicationContext() {
         if (applicationContext == null) {
-            throw new IllegalStateException("applicationContext未注入,请在applicationContext.xml中定义SpringContextUtil");
+            throw new IllegalStateException("applicaitonContext未注入,请在applicationContext.xml中定义SpringContextUtil");
         }
     }
 
@@ -369,28 +358,6 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
         Map<String, T> beansOfType = applicationContext.getBeansOfType(clazz);
 
         return beansOfType.entrySet().stream().findFirst().get().getValue();
-    }
-
-    /**
-     * 同步方法注册bean到ApplicationContext中
-     *
-     * @param beanName
-     * @param clazz
-     * @param original bean的属性值
-     */
-    public static synchronized void setBean(String beanName, Class<?> clazz, Map<String, Object> original) {
-        checkApplicationContext();
-        DefaultListableBeanFactory beanFactory = (DefaultListableBeanFactory) applicationContext.getAutowireCapableBeanFactory();
-        if (beanFactory.containsBean(beanName)) {
-            return;
-        }
-        GenericBeanDefinition definition = new GenericBeanDefinition();
-        //类class
-        definition.setBeanClass(clazz);
-        //属性赋值
-        definition.setPropertyValues(new MutablePropertyValues(original));
-        //注册到spring上下文
-        beanFactory.registerBeanDefinition(beanName, definition);
     }
 
     public static synchronized void setCosBean(String beanName, Class<?> clazz, String dataSourceName, ConstructorArgumentValues original) {
@@ -419,16 +386,16 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
         beanFactory.registerBeanDefinition(beanName, definition);
     }
 
-    public static synchronized void setCosBean(String beanName, Class<?> clazz, ConstructorArgumentValues original) {
+    public static synchronized void setCosAndInitBean(String beanName, Class<?> clazz, ConstructorArgumentValues original) {
         checkApplicationContext();
         DefaultListableBeanFactory beanFactory = (DefaultListableBeanFactory) applicationContext.getAutowireCapableBeanFactory();
-        //这里重要
         if (beanFactory.containsBean(beanName)) {
             return;
         }
         GenericBeanDefinition definition = new GenericBeanDefinition();
         //类class
         definition.setBeanClass(clazz);
+        definition.setFactoryMethodName("getInit");
         //属性赋值
         definition.setConstructorArgumentValues(new ConstructorArgumentValues(original));
         //注册到spring上下文
@@ -444,7 +411,7 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
         }
         if (serDefaultDriver(beanName, config)) return;
 
-        logger.info("register dataSoruce = {}", beanName + "DataSource");
+        logger.info("register dataSource = {}", beanName + "DataSource");
         BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(DruidDataSource.class);
         // 此次循环是为了给不存在配置赋默认值
         defaultDataSourcePropMap.forEach((k, v) -> {
@@ -470,7 +437,7 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
                 try {
                     beanDefinitionBuilder.addPropertyValue(Constant.PASSWORD, RSAUtil.decode(v));
                 } catch (Exception e) {
-                    logger.info("Exception", e);
+                    logger.info("Exception = {} ", e);
                     throw new DynamicDataSourceException(beanName + "数据库密码rsa-password解密异常");
                 }
                 return;
@@ -517,5 +484,4 @@ public class MybatisDataSourceConfiguration implements InitializingBean, Applica
         defaultDataSourcePropMap.put("logAbandoned", "true");
         defaultDataSourcePropMap.put("validationQuery", "select 1");
     }
-
 }

@@ -33,7 +33,6 @@ lib/
 /../spring-cloud-load-balance/spring-cloud-load-balance.iml
 /vcs.xml
 /compiler.xml
-/../spring-cloud-load-balance/spring-cloud-load-balance.iml
 /.idea/compiler.xml
 /.idea/encodings.xml
 /.idea/misc.xml
@@ -41,3 +40,4 @@ lib/
 /.idea/spring-cloud-component.iml
 /.idea/vcs.xml
 /.idea/workspace.xml
+/common-spring-cloud-framework/.flattened-pom.xml

@@ -11,8 +11,10 @@ import java.security.spec.X509EncodedKeySpec;
 
 /**
  * rsa数据库密码加解密工具
+ * @Author liupengfei@e6yun.com
+ * @Date 2018/8/27 16:14
+ * @Description
  **/
-@SuppressWarnings("all")
 public class RSAUtil {
     final static String PUBLIC_KEY_STR="MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOGB1BRSBBBhWYJe6cZK+aa5ePl09XGw4ERkLKSavj9e67brDJ+Ug0nARxZyoR7rQJG3Zjy85IavIkIxT2dw1NMCAwEAAQ==";
     final static String PRIVATE_KEY_STR="MIIBUwIBADANBgkqhkiG9w0BAQEFAASCAT0wggE5AgEAAkEA4YHUFFIEEGFZgl7pxkr5prl4+XT1cbDgRGQspJq+P17rtusMn5SDScBHFnKhHutAkbdmPLzkhq8iQjFPZ3DU0wIDAQABAj8O+ZAbyVZ7v/sxrRvZDyGE8MwXxKyH4DcEU6KjS6NWkdckLNH8mUHu42eVx9U9xDBdqtSK7HNmGa/Q0WNpMYkCIQD7GaKmXHRAVxa1Px9C665dxz8HsECFoRKOqg6ymONVHQIhAOXoWAl5DYY7wpnFej/AzP7qwLW9XloKfStyatWYnV6vAiBKtIPJjvQfOEnPPqpkVI4Z5G+CMBPiLdvBiiK5S/dGmQIhALEwQXGDj03ODuvOS6qI4DTzHfSzbt08Sj3K39Wg2mBXAiAlrdVerK1M0CPpeecWCqhLlgE1MWLAin3EDqhUtJ9r4A==";
@@ -95,7 +97,6 @@ public class RSAUtil {
     public static String encode(String str,String publicKeyStr) throws Exception{
         return RSAUtil.byte2Base64(RSAUtil.publicEncrypt(str.getBytes(), RSAUtil.string2PublicKey(publicKeyStr)));
     }
-
     /**
      * rsa 加密
      * @param str
@@ -116,7 +117,6 @@ public class RSAUtil {
     public static String decode(String rsaStr,String privateKeyStr) throws Exception{
         return new String(RSAUtil.privateDecrypt(RSAUtil.base642Byte(rsaStr), RSAUtil.string2PrivateKey(privateKeyStr)));
     }
-
     /**
      * rsa 解密
      * @param rsaStr

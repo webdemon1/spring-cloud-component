@@ -1,1 +1,1 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=com.e6yun.project.apollo.config.ApolloConfig
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=com.alibaba.project.apollo.config.ApolloConfig

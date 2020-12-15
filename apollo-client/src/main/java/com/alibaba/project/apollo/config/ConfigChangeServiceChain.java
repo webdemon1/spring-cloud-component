@@ -1,4 +1,4 @@
-package com.e6yun.project.apollo.config;
+package com.alibaba.project.apollo.config;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Value;

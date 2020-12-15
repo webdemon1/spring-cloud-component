@@ -1,0 +1,2 @@
+org.springframework.boot.env.EnvironmentPostProcessor=com.alibaba.project.AllowBeanDefinitionOverridingEnvironmentProcessor
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=com.alibaba.project.JpaDataSourceConfiguration
